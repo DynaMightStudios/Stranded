@@ -1,0 +1,94 @@
+from ursina import *
+from ursina.prefabs.first_person_controller import FirstPersonController
+
+app = Ursina()
+window.fullscreen = True
+
+island = Entity(model='smaller_hills.obj', texture='grass', scale = 2000, texture_scale = (20, 20), collider='mesh')
+
+player = FirstPersonController(speed = 15, position = (745, 300, 462), scale = (2, 2, 2))
+
+ambient_light_value = 1
+ambient_light = AmbientLight(color=color.rgb(ambient_light_value, ambient_light_value, ambient_light_value))
+
+step = 0
+
+def night_time_lighting(step=0):
+    global ambient_light_value
+    if step < 16:
+        ambient_light_value -= 0.05
+        ambient_light.color = color.white * ambient_light_value
+        invoke(night_time_lighting, step + 1, delay=5)
+    else:
+        invoke(day_time_lighting, delay=50)
+        print(ambient_light_value)
+def day_time_lighting(step=0):
+    global ambient_light_value
+    if step < 16:
+        ambient_light_value += 0.05
+        ambient_light.color = color.white * ambient_light_value
+        invoke(day_time_lighting, step + 1, delay=5)
+    else:
+        invoke(night_time_lighting, delay=60)
+        print(ambient_light_value)
+
+invoke(night_time_lighting, delay = 20)
+
+def update():
+    if held_keys['c'] == 1:
+        print(player.position)
+
+    if held_keys['shift'] == 1:
+        player.speed = 25
+    else:
+        player.speed = 15
+
+item_scale = (5, 1, 5)
+build_pos = (0, 0, 0)
+curb = Entity(model='cube', scale = item_scale, color=color.blue, position = build_pos)
+build_mode = False
+curb.enabled = False
+item_rotation = 0
+
+def update():
+    global build_pos, build_mode
+    if build_mode:
+        build_pos = camera.world_position + camera.forward * 5
+        build_pos = (round(build_pos.x), round(build_pos.y), round(build_pos.z))
+        curb.position = build_pos
+        curb.scale = item_scale
+        curb.rotation = (0, item_rotation, 0)
+
+def input(key):
+    global build_mode, item_scale, item_rotation, build_pos
+    
+    if key == 't':
+        if build_mode:
+            build_mode = False
+            curb.enabled = False
+        elif not build_mode:
+            build_mode = True
+            curb.enabled = True
+    if build_mode:
+        if key == '1':
+            item_scale = (5, 1, 5)
+        if key == '2':
+            item_scale = (1, 20, 5)
+        if key == 'right mouse down' or key == 'e':
+            Entity(model='cube', texture='brick', texture_scale = (1, 1), rotation = (0, item_rotation, 0), color=color.brown, scale=item_scale, position=build_pos, collider='box')
+        if key == 'r':
+            if item_rotation == 90:
+                item_rotation = 0
+            elif item_rotation == 0:
+                item_rotation = 90
+
+    if key == 'p':
+        print(player.position)
+
+app.run()
+
+"""notes
+
+potential base location: (79.430046, -39.280715, 400.20391)
+
+"""
