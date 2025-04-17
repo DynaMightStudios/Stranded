@@ -3,11 +3,18 @@ from ursina.prefabs.first_person_controller import FirstPersonController
 
 app = Ursina()
 window.fullscreen = True
+window.entity_counter.enabled = False
+window.collider_counter.enabled = False
 
 island = Entity(model='smaller_hills.obj', texture='grass', scale = 2000, texture_scale = (20, 20), collider='mesh')
-
+sky = Sky(texture=None, color = color.rgb(200/255, 225/255, 245/255))
 player = FirstPersonController(speed = 15, position = (745, 300, 462), scale = (2, 2, 2))
+player.gravity = 2.5
+player.speed = 15
+player.jump_height = 5
 
+
+sky_textures = [color.rgb(5/255, 7/255, 18/255), color.rgb(10/255, 13/255, 28/255), color.rgb(15/255, 18/255, 38/255), color.rgb(22/255, 27/255, 50/255), color.rgb(30/255, 36/255, 65/255), color.rgb(40/255, 48/255, 85/255), color.rgb(55/255, 60/255, 100/255), color.rgb(70/255, 80/255, 120/255), color.rgb(90/255, 100/255, 145/255), color.rgb(110/255, 125/255, 170/255), color.rgb(130/255, 150/255, 195/255), color.rgb(150/255, 175/255, 215/255), color.rgb(170/255, 200/255, 230/255), color.rgb(185/255, 215/255, 240/255), color.rgb(200/255, 225/255, 245/255), color.rgb(200/255, 225/255, 245/255), color.rgb(200/255, 225/255, 245/255)]
 ambient_light_value = 1
 ambient_light = AmbientLight(color=color.rgb(ambient_light_value, ambient_light_value, ambient_light_value))
 
@@ -19,18 +26,23 @@ def night_time_lighting(step=0):
         ambient_light_value -= 0.05
         ambient_light.color = color.white * ambient_light_value
         invoke(night_time_lighting, step + 1, delay=5)
+        sky.color = sky_textures[16-step]
+        print(sky.color)
     else:
         invoke(day_time_lighting, delay=50)
         print(ambient_light_value)
+        sky.color = sky_textures[0]
 def day_time_lighting(step=0):
     global ambient_light_value
     if step < 16:
         ambient_light_value += 0.05
         ambient_light.color = color.white * ambient_light_value
         invoke(day_time_lighting, step + 1, delay=5)
+        sky.color = sky_textures[step]
+        print(sky.color)
     else:
         invoke(night_time_lighting, delay=60)
-        print(ambient_light_value)
+        sky.color = sky_textures[16]
 
 invoke(night_time_lighting, delay = 20)
 
@@ -43,8 +55,13 @@ def update():
     else:
         player.speed = 15
 
+#update and build
+blocks = []
+block_lists = {}
 item_scale = (5, 1, 5)
-build_pos = (0, 0, 0)
+build_pos = Vec3(0, 0, 0)
+name = tuple(build_pos)
+
 curb = Entity(model='cube', scale = item_scale, color=color.blue, position = build_pos)
 build_mode = False
 curb.enabled = False
@@ -58,9 +75,18 @@ def update():
         curb.position = build_pos
         curb.scale = item_scale
         curb.rotation = (0, item_rotation, 0)
+        name = tuple(build_pos)
+
+    if held_keys['shift'] == 1:
+        player.speed = 25
+    else:
+        player.speed = 15
 
 def input(key):
-    global build_mode, item_scale, item_rotation, build_pos
+    global build_mode, item_scale, item_rotation, build_pos, name
+    
+    if key == 'p':
+        print(player.position)
     
     if key == 't':
         if build_mode:
@@ -73,17 +99,25 @@ def input(key):
         if key == '1':
             item_scale = (5, 1, 5)
         if key == '2':
-            item_scale = (1, 20, 5)
+            item_scale = (1, 5, 5)
         if key == 'right mouse down' or key == 'e':
-            Entity(model='cube', texture='brick', texture_scale = (1, 1), rotation = (0, item_rotation, 0), color=color.brown, scale=item_scale, position=build_pos, collider='box')
+            if build_pos not in blocks:
+                name = Entity(model='cube', texture='brick', texture_scale = (1, 1), rotation = (0, item_rotation, 0), color=color.brown, scale=item_scale, position=build_pos, collider='box')
+                block_lists[build_pos] = name
+                blocks.append(build_pos)
+        if key == 'q':
+            try:
+                x = block_lists[build_pos]
+                x.enabled = False
+                blocks.remove(build_pos)
+                del block_lists[build_pos]
+            except KeyError:
+                pass
         if key == 'r':
             if item_rotation == 90:
                 item_rotation = 0
             elif item_rotation == 0:
                 item_rotation = 90
-
-    if key == 'p':
-        print(player.position)
 
 app.run()
 
