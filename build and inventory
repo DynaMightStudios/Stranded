@@ -1,0 +1,90 @@
+from ursina import *
+from ursina.prefabs.first_person_controller import FirstPersonController
+
+app = Ursina()
+
+window.fullscreen = True
+
+Player = FirstPersonController()
+plane = Entity(model='plane', texture='grass', collider='box', scale = 20)
+
+World_Title = Entity(
+    model="cube",
+    texture="images/AE&EP",
+    scale = (12, 5, 2),
+    position = (2, 2, 2),
+)
+
+slots = []
+
+blocks = []#
+block_lists = {}#
+build_pos = Vec3(0, 0, 0)#
+name = tuple(build_pos)
+cursor_block = Entity(model='cube', color = color.black, position = build_pos)
+
+class Inventory(Button):
+    def __init__(self, item = "none", text = "none", amount = 0, **kwargs):
+        super().__init__(**kwargs)
+        self.item = item
+        self.amount = amount
+    def update_text(self):
+        x = str(self.amount)
+        self.text = x
+
+for numbers in range(1, 10+1):
+    name = str(numbers)
+    name = Inventory(
+        position = Vec2(-0.75 + numbers/7.75, -0.42),
+        scale = 0.1,
+        color = color.black33,
+    )
+    slots.append(name)
+
+holding = slots[1-1]
+
+def input(key):
+    global name, build_pos, holding
+
+    if key == 'e' and build_pos not in blocks:
+        if holding.item == "block" and holding.amount > 0:
+            holding.amount -= 1
+            name = Entity(model='cube', collider='box', color = color.red, position = build_pos)
+            block_lists[build_pos] = name
+            blocks.append(build_pos)
+    elif key == 'q':
+        try:
+            x = block_lists[build_pos]
+            x.enabled = False
+            blocks.remove(build_pos)
+            del block_lists[build_pos]
+            holding.amount += 1
+            holding.item = 'block'
+        except KeyError:
+            pass
+    elif key == 'g':
+        for keys in block_lists:
+            print(keys)
+        print(blocks)
+    elif key == 'tab': #claim one block
+        holding.amount += 1
+        holding.item = 'block'
+
+    for numbers in range(0, 10):
+        if key == str(numbers):
+            holding = slots[numbers-1]
+previous = ""
+def update():
+    global holding, build_pos
+    build_pos = camera.world_position + camera.forward * 3
+    build_pos = (round(build_pos.x), round(build_pos.y), round(build_pos.z))
+    
+    name = tuple(build_pos)
+    cursor_block.position = build_pos
+    holding.color = color.black50
+    for numbers in range(0, 10):
+        if slots[numbers-1] != holding:#handle non holding
+            slots[numbers-1].color = color.black33
+        slots[numbers-1].update_text()#handle all
+
+app.run()
